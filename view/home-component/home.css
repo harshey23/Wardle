@@ -1,0 +1,16 @@
+.image-div {
+    height: 100vh;
+    width: 100%;
+    background-size: contain;
+    background-image: url('../../design/landing_page_background_design.png');
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+body {
+    margin: 0;
+}
+h1 {
+    margin: 0;
+    color: white;
+}
