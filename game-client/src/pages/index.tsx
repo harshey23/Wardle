@@ -1,26 +1,17 @@
-import useWebSocket from '../hooks/useWebSocket';
+import { useRouter } from 'next/router';
 
 export default function Home() {
-  const { socket, messages } = useWebSocket();
+  const router = useRouter();
 
-  const sendMessage = () => {
-    if (socket) {
-      socket.emit('message', `Hello Server! ${Date.now()}`);
-    }
+  const createGame = () => {
+    const gameId = Math.random().toString(36).substr(2, 6); // Generate a random ID
+    router.push(`/game/${gameId}`);
   };
 
   return (
     <div>
       <h1>Multiplayer Game</h1>
-      <button onClick={sendMessage}>Send Message</button>
-      <div>
-        <h2>Messages:</h2>
-        <ul>
-          {messages.map((msg, index) => (
-            <li key={index}>{msg}</li>
-          ))}
-        </ul>
-      </div>
+      <button onClick={createGame}>Create Game</button>
     </div>
   );
 }
