@@ -10,9 +10,11 @@ import {
 import { Server, Socket } from 'socket.io';
 
 type Room = {
-  players: string[];
+  players: string[]; // list of socket IDs
   hostId: string | null;
+  playerNames: Record<string, string>; // socket.id -> name
 };
+
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -26,50 +28,58 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     for (const roomId in this.rooms) {
       const room = this.rooms[roomId];
+      
+      //Remove player from room if  disconnected.
       room.players = room.players.filter(id => id !== client.id);
-
+      delete room.playerNames[client.id];
+      
       // Reassign host if host left
       if (room.hostId === client.id) {
         room.hostId = room.players[0] || null;
       }
 
+      // If no players left, delete room
       if (room.players.length === 0) {
         delete this.rooms[roomId];
       } else {
         this.server.to(roomId).emit('room-update', {
-          players: room.players,
+          players: room.players.map(id => ({ id, name: room.playerNames[id] })),
           hostId: room.hostId,
         });
       }
     }
+    console.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('join-room')
-  handleJoinRoom(client: Socket, roomId: string) {
+  handleJoinRoom(client: Socket, payload: { roomId: string; name: string }) {
+    const { roomId, name } = payload;
+  
     if (!this.rooms[roomId]) {
       this.rooms[roomId] = {
         players: [],
         hostId: null,
+        playerNames: {},
       };
     }
-
+  
     const room = this.rooms[roomId];
-
+  
     if (room.players.length >= 10) {
       client.emit('room-full', 'Room is full (max 10 players).');
       return;
     }
-
+  
     client.join(roomId);
     room.players.push(client.id);
-
+    room.playerNames[client.id] = name;
+  
     if (!room.hostId) {
       room.hostId = client.id;
     }
-
-    console.log(`Client ${client.id} joined room ${roomId}`);
+  
     this.server.to(roomId).emit('room-update', {
-      players: room.players,
+      players: room.players.map(id => ({ id, name: room.playerNames[id] })),
       hostId: room.hostId,
     });
   }
@@ -80,6 +90,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!room) return;
 
     room.players = room.players.filter(id => id !== client.id);
+    delete room.playerNames[client.id]; // Remove player name
+    
+    // Reassign host if host left
     if (room.hostId === client.id) {
       room.hostId = room.players[0] || null;
     }

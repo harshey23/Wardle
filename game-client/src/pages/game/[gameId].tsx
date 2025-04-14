@@ -6,19 +6,29 @@ import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3000'); // Have to replace this with acctual backend server URL once deployed.
 
+type Player = {
+  id: string;
+  name: string;
+};
+
 export default function GameRoom() {
   const router = useRouter();
   const { gameId } = router.query;
 
-  const [players, setPlayers] = useState<string[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [hostId, setHostId] = useState<string | null>(null);
   const [isFull, setIsFull] = useState(false);
   const [roomUrl, setRoomUrl] = useState('');
   const [gameStarted, setGameStarted] = useState(false);
+  const [name, setName] = useState(''); // line to manage game name.
 
   useEffect(() => {
     if (gameId) {
-      socket.emit('join-room', gameId);
+      const userName = prompt('Enter your name:');
+      if (!userName) return;
+      setName(userName);
+
+      socket.emit('join-room', { roomId: gameId, name: userName });
 
       socket.on('room-update', ({ players, hostId }) => {
         setPlayers(players);
@@ -58,9 +68,9 @@ export default function GameRoom() {
       <h2>Waiting Lobby</h2>
       <p>Players in room: {players.length}/10</p>
       <ul>
-        {players.map((id) => (
-          <li key={id}>
-            {id} {id === hostId && <strong>(Host)</strong>}
+        {players.map((player) => (
+          <li key={player.id}>
+            {player.name} {player.id === hostId && <strong>(Host)</strong>}
           </li>
         ))}
       </ul>
